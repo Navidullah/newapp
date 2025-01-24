@@ -14,9 +14,13 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Card } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { getEnv } from "@/helpers/getEnv.js";
+import { showToast } from "@/helpers/showToast.js";
+import GoogleLogin from "@/components/GoogleLogin";
 
 const SignUp = () => {
+  const navigate = useNavigate();
   const formSchema = z.object({
     name: z.string().min(3, "name must be 3 characters long"),
     email: z.string().email(),
@@ -24,7 +28,7 @@ const SignUp = () => {
     confirmPassword: z
       .string()
       .refine(
-        (data) => data.passowrd === data.confirmPassword,
+        (data) => data.password === data.confirmPassword,
         "Password donot match"
       ),
   });
@@ -40,11 +44,31 @@ const SignUp = () => {
     },
   });
 
+  console.log(getEnv("VITE_API_BASE_URL"));
+
   // 2. Define a submit handler.
-  function onSubmit(values) {
+  async function onSubmit(values) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
-    console.log(values);
+    try {
+      const response = await fetch(
+        `${getEnv("VITE_API_BASE_URL")}/api/auth/register`,
+        {
+          method: "POST",
+          headers: { "Content-type": "application/json" },
+          body: JSON.stringify(values),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        showToast("error", data.message);
+      }
+
+      navigate("/signin");
+      showToast("success", data.message);
+    } catch (error) {
+      showToast("error", error.message);
+    }
   }
   return (
     <div className="flex items-center justify-center h-screen w-screen">
@@ -52,6 +76,12 @@ const SignUp = () => {
         <h1 className="text2xl font-bold text-center mb-5">
           Create Your Account
         </h1>
+        <div className="">
+          <GoogleLogin />
+          <div className="flex justify-center items-center border-2 my-5">
+            <span className="absolute bg-white text-sm">Or</span>
+          </div>
+        </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="mb-3">
@@ -94,7 +124,11 @@ const SignUp = () => {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your password" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        {...field}
+                      />
                     </FormControl>
 
                     <FormMessage />
@@ -111,6 +145,7 @@ const SignUp = () => {
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
                       <Input
+                        type="password"
                         placeholder="Enter your password again"
                         {...field}
                       />
