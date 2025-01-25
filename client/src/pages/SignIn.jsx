@@ -14,9 +14,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Card } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { showToast } from "@/helpers/showToast";
+import { getEnv } from "@/helpers/getEnv";
 
 const SignIn = () => {
+  const navigate = useNavigate();
   const formSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8, "Password must be atleast 8 characters long"),
@@ -32,10 +35,29 @@ const SignIn = () => {
   });
 
   // 2. Define a submit handler.
-  function onSubmit(values) {
+  async function onSubmit(values) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
-    console.log(values);
+    try {
+      const response = await fetch(
+        `${getEnv("VITE_API_BASE_URL")}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(values),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        return showToast("error", data.message);
+      }
+
+      navigate("/");
+      showToast("success", data.message);
+    } catch (error) {
+      showToast("error", error.message);
+    }
   }
   return (
     <div className="flex items-center justify-center h-screen w-screen">
